@@ -7,25 +7,16 @@
     }
 
     /**
-     * The native object that plays video: the user's own IINA installation, exposed over the
-     * WebChannel. `window.api.player` no longer exists in this build - there is no in-window
-     * renderer and no audio player - so the fallback only keeps the shape of the original
-     * upstream adapter.
+     * The user's own IINA installation, exposed over the WebChannel. It is the only playback
+     * backend in this build: video appears in IINA's own window, so this adapter never creates a
+     * video surface, changes backdrop transparency or takes over the OSD.
      */
-    function getNativeVideoBackend() {
-        return window.api.iinaPlayer || window.api.player;
-    }
-
-    /**
-     * True when video plays in a separate application window, which means this page must not
-     * create a video surface, change backdrop transparency, or take over the OSD.
-     */
-    function isExternalBackend(backend) {
-        return Boolean(backend && backend.externalPlayback);
+    function iinaPlayer() {
+        return window.api.iinaPlayer;
     }
 
     class mpvVideoPlayer {
-        constructor({ events, loading, appRouter, globalize, appHost, appSettings, playbackManager, confirm, dashboard }) {
+        constructor({ events, loading, appRouter, globalize, appHost, appSettings, playbackManager, confirm }) {
             this.events = events;
             this.loading = loading;
             this.appRouter = appRouter;
@@ -35,12 +26,10 @@
             this.playbackManager = playbackManager;
             this.confirm = confirm;
 
-            this.setTransparency = dashboard.default.setBackdropTransparency.bind(dashboard);
-
             /**
              * @type {string}
              */
-            this.name = window.api.iinaPlayer ? 'IINA Video Player' : 'MPV Video Player';
+            this.name = 'IINA Video Player';
             /**
              * @type {string}
              */
@@ -61,10 +50,6 @@
              */
             this.isFetching = false;
 
-            /**
-             * @type {HTMLDivElement | null | undefined}
-             */
-            this._videoDialog = undefined;
             /**
              * @type {number | undefined}
              */
@@ -156,15 +141,9 @@
              * @private
              */
             this.onEnded = () => {
-                // An external player finishing an item returns to the Jellyfin UI rather than
-                // opening a new IINA window for the next one. The built-in renderer keeps
-                // Jellyfin's usual auto-advance behaviour.
-                if (isExternalBackend(getNativeVideoBackend())) {
-                    this.stopWithoutAdvancing();
-                    return;
-                }
-
-                this.onEndedInternal();
+                // Finishing an item returns to the Jellyfin UI rather than opening a new IINA
+                // window for the next one.
+                this.stopWithoutAdvancing();
             };
 
             /**
@@ -201,26 +180,6 @@
                     this.setVolume(volume, false);
 
                     this.setPlaybackRate(this.getPlaybackRate());
-
-                    if (!isExternalBackend(getNativeVideoBackend())) {
-                        // Hide backdrop when playback starts
-                        const dlg = this._videoDialog;
-                        if (dlg) {
-                            dlg.style.backgroundImage = '';
-                        }
-
-                        // Navigate to OSD view to show playback screen
-                        if (this._currentPlayOptions.fullscreen) {
-                            this.appRouter.showVideoOsd();
-                            // Lower video dialog z-index so OSD can receive input
-                            if (dlg) {
-                                dlg.style.zIndex = 'unset';
-                            }
-                        }
-
-                        // Keep video fullscreen - native OSD is above it
-                        window.api.player.setVideoRectangle(0, 0, 0, 0);
-                    }
                 }
 
                 if (this._paused) {
@@ -287,8 +246,8 @@
         }
 
         async play(options) {
-            const backend = getNativeVideoBackend();
-            if (isExternalBackend(backend) && backend.available === false) {
+            const backend = iinaPlayer();
+            if (backend.available === false) {
                 // No silent fallback: there is no HTML5 player in this fork, and quietly using the
                 // built-in renderer would contradict the user's macOS configuration.
                 this.loading.hide();
@@ -316,8 +275,8 @@
             if (options.fullscreen) {
                 this.loading.show();
             }
-            const elem = await this.createMediaElement(options);
-            return await this.setCurrentSrc(elem, options);
+            this.connectBackendSignals(iinaPlayer());
+            return await this.setCurrentSrc(options);
         }
 
         getSavedVolume() {
@@ -333,18 +292,6 @@
                     }
                 }
             }
-        }
-
-        /**
-         * @private
-         */
-        getStreamByIndex(mediaStreams, jellyIndex) {
-            for (const stream of mediaStreams) {
-                if (stream.Index == jellyIndex) {
-                    return stream;
-                }
-            }
-            return null;
         }
 
         /**
@@ -367,7 +314,7 @@
         /**
          * @private
          */
-        setCurrentSrc(elem, options) {
+        setCurrentSrc(options) {
             return new Promise((resolve) => {
                 const val = options.url;
                 this._currentSrc = val;
@@ -390,7 +337,7 @@
                     streamdata.frameRate = fps;
                 }
 
-                const player = getNativeVideoBackend();
+                const player = iinaPlayer();
 
                 const streams = options.mediaSource?.MediaStreams || [];
 
@@ -399,26 +346,15 @@
                     ? this.getRelativeIndexByType(streams, this._audioTrackIndexToSetOnPlaying, 'Audio')
                     : 1;
 
-                // Handle subtitle - check for external first
-                let subtitleParam;
+                // Direct Play delivers the original file, so every subtitle the server reports is
+                // physically present in the container. Selecting it by track index avoids a second
+                // authenticated request for a stream we already have. Sidecar subtitle files are
+                // out of scope; see docs/iina-external-player.md.
+                let subtitleParam = -1;
                 if (this._subtitleTrackIndexToSetOnPlaying >= 0) {
-                    const subStream = this.getStreamByIndex(streams, this._subtitleTrackIndexToSetOnPlaying);
-                    if (subStream && subStream.DeliveryMethod === 'External' && subStream.DeliveryUrl
-                        && !isExternalBackend(player)) {
-                        subtitleParam = '#,' + subStream.DeliveryUrl;
-                        console.log('[MPV] Using external subtitle for stream index:', this._subtitleTrackIndexToSetOnPlaying);
-                    } else {
-                        // The external player direct-plays the original file, so every subtitle the
-                        // server reports is physically present in the container. Selecting it by
-                        // track index avoids a second authenticated request for a stream we already
-                        // have. Sidecar subtitle files are out of scope; see
-                        // docs/iina-external-player.md.
-                        const relIndex = this.getRelativeIndexByType(streams, this._subtitleTrackIndexToSetOnPlaying, 'Subtitle');
-                        subtitleParam = relIndex != null ? relIndex : -1;
-                        console.log('[MPV] Mapped subtitle index:', this._subtitleTrackIndexToSetOnPlaying, '->', subtitleParam);
-                    }
-                } else {
-                    subtitleParam = -1;
+                    const relIndex = this.getRelativeIndexByType(streams, this._subtitleTrackIndexToSetOnPlaying, 'Subtitle');
+                    subtitleParam = relIndex != null ? relIndex : -1;
+                    console.log('[MPV] Mapped subtitle index:', this._subtitleTrackIndexToSetOnPlaying, '->', subtitleParam);
                 }
 
                 console.log('[MPV] Mapped audio index:', this._audioTrackIndexToSetOnPlaying, '->', audioRelIndex);
@@ -436,7 +372,7 @@
             console.log('[MPV] setSubtitleStreamIndex called with index:', index);
             this._subtitleTrackIndexToSetOnPlaying = index;
 
-            const player = getNativeVideoBackend();
+            const player = iinaPlayer();
 
             if (index < 0) {
                 player.setSubtitleStream(-1);
@@ -444,17 +380,6 @@
             }
 
             const streams = this._currentPlayOptions?.mediaSource?.MediaStreams || [];
-            const stream = this.getStreamByIndex(streams, index);
-
-            // Handle external subtitle URL
-            if (stream && stream.DeliveryMethod === 'External' && stream.DeliveryUrl
-                && !isExternalBackend(player)) {
-                console.log('[MPV] Loading external subtitle for stream index:', index);
-                player.setSubtitleStream('#,' + stream.DeliveryUrl);
-                return;
-            }
-
-            // Handle embedded subtitle via relative index
             const relIndex = this.getRelativeIndexByType(streams, index, 'Subtitle');
             console.log('[MPV] Mapped subtitle index:', index, '->', relIndex);
             player.setSubtitleStream(relIndex != null ? relIndex : -1);
@@ -468,7 +393,7 @@
         resetSubtitleOffset() {
             this._currentTrackOffset = 0;
             this._showTrackOffset = false;
-            getNativeVideoBackend().setSubtitleDelay(0);
+            iinaPlayer().setSubtitleDelay(0);
         }
 
         enableShowingSubtitleOffset() {
@@ -486,7 +411,7 @@
         setSubtitleOffset(offset) {
             const offsetValue = parseFloat(offset);
             this._currentTrackOffset = offsetValue;
-            getNativeVideoBackend().setSubtitleDelay(Math.round(offsetValue * 1000));
+            iinaPlayer().setSubtitleDelay(Math.round(offsetValue * 1000));
         }
 
         getSubtitleOffset() {
@@ -518,7 +443,7 @@
             const streams = this._currentPlayOptions?.mediaSource?.MediaStreams || [];
             const relIndex = index < 0 ? -1 : this.getRelativeIndexByType(streams, index, 'Audio');
             console.log('[MPV] Mapped audio index:', index, '->', relIndex);
-            getNativeVideoBackend().setAudioStream(relIndex != null ? relIndex : -1);
+            iinaPlayer().setAudioStream(relIndex != null ? relIndex : -1);
         }
 
         onEndedInternal() {
@@ -562,7 +487,7 @@
         }
 
         stop(destroyPlayer) {
-            getNativeVideoBackend().stop();
+            iinaPlayer().stop();
 
             this.onEndedInternal();
 
@@ -572,31 +497,12 @@
             return Promise.resolve();
         }
 
+        /**
+         * @private
+         * Nothing is drawn in this window, so ending playback is just stopping IINA.
+         */
         removeMediaDialog() {
-            const player = getNativeVideoBackend();
-            player.stop();
-
-            if (isExternalBackend(player)) {
-                // Nothing was drawn in this window, so there is no video surface, transparency or
-                // scroll state to undo.
-                return;
-            }
-
-            window.api.player.setVideoRectangle(-1, 0, 0, 0);
-
-            document.body.classList.remove('hide-scroll');
-
-            const dlg = this._videoDialog;
-            if (dlg) {
-                this.setTransparency(0); // TRANSPARENCY_LEVEL.None
-                this._videoDialog = null;
-                dlg.parentNode.removeChild(dlg);
-            }
-
-            // Only supporting QtWebEngine here
-            if (document.webkitIsFullScreen && document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
+            iinaPlayer().stop();
         }
 
         /**
@@ -618,12 +524,9 @@
             player.error.connect(this.onError);
             player.paused.connect(this.onPause);
             player.bufferedRangesUpdated.connect(this.onBufferedRangesUpdated);
-
-            if (isExternalBackend(player)) {
-                // The external player can be stopped or closed outside this window; without this
-                // Jellyfin would stay in the playing state forever.
-                player.canceled.connect(this.onCanceled);
-            }
+            // IINA can be stopped or closed outside this window; without this Jellyfin would stay
+            // in the playing state forever.
+            player.canceled.connect(this.onCanceled);
         }
 
         /**
@@ -642,10 +545,7 @@
             player.error.disconnect(this.onError);
             player.paused.disconnect(this.onPause);
             player.bufferedRangesUpdated.disconnect(this.onBufferedRangesUpdated);
-
-            if (isExternalBackend(player)) {
-                player.canceled.disconnect(this.onCanceled);
-            }
+            player.canceled.disconnect(this.onCanceled);
         }
 
         destroy() {
@@ -653,62 +553,7 @@
 
             this._bufferedRanges = [];
             this._duration = undefined;
-            this.disconnectBackendSignals(getNativeVideoBackend());
-        }
-
-        /**
-         * @private
-         */
-        createMediaElement(options) {
-            const player = getNativeVideoBackend();
-            this.connectBackendSignals(player);
-
-            if (isExternalBackend(player)) {
-                // Video appears in a separate application window. Creating the local video
-                // container here would black out the page behind an empty surface.
-                return Promise.resolve();
-            }
-
-            const dlg = document.querySelector('.videoPlayerContainer');
-
-            if (!dlg) {
-                const dlg = document.createElement('div');
-
-                dlg.classList.add('videoPlayerContainer');
-                dlg.style.position = 'fixed';
-                dlg.style.top = 0;
-                dlg.style.bottom = 0;
-                dlg.style.left = 0;
-                dlg.style.right = 0;
-                dlg.style.display = 'flex';
-                dlg.style.alignItems = 'center';
-
-                if (options.fullscreen) {
-                    dlg.style.zIndex = 1000;
-                }
-
-                const html = '';
-
-                dlg.innerHTML = html;
-
-                // Set backdrop if available
-                if (options.backdropUrl) {
-                    dlg.style.backgroundImage = `url('${options.backdropUrl}')`;
-                    dlg.style.backgroundSize = 'cover';
-                    dlg.style.backgroundPosition = 'center';
-                }
-
-                document.body.insertBefore(dlg, document.body.firstChild);
-                this.setTransparency(2); // TRANSPARENCY_LEVEL.Full
-                this._videoDialog = dlg;
-            }
-
-            // we need to hide scrollbar when starting playback from page with animated background
-            if (options.fullscreen) {
-                document.body.classList.add('hide-scroll');
-            }
-
-            return Promise.resolve();
+            this.disconnectBackendSignals(iinaPlayer());
         }
 
     /**
@@ -773,7 +618,7 @@
     // Save this for when playback stops, because querying the time at that point might return 0
     currentTime(val) {
         if (val != null) {
-            getNativeVideoBackend().seekTo(val);
+            iinaPlayer().seekTo(val);
             return;
         }
 
@@ -782,7 +627,7 @@
 
     currentTimeAsync() {
         return new Promise((resolve) => {
-            getNativeVideoBackend().getPosition(resolve);
+            iinaPlayer().getPosition(resolve);
         });
     }
 
@@ -825,17 +670,17 @@
     }
 
     pause() {
-        getNativeVideoBackend().pause();
+        iinaPlayer().pause();
     }
 
     // This is a retry after error
     resume() {
         this._paused = false;
-        getNativeVideoBackend().play();
+        iinaPlayer().play();
     }
 
     unpause() {
-        getNativeVideoBackend().play();
+        iinaPlayer().play();
     }
 
     paused() {
@@ -845,7 +690,7 @@
     setPlaybackRate(value) {
         let playSpeed = +value; //this comes as a string from player force int for now
         this._playRate = playSpeed;
-        getNativeVideoBackend().setPlaybackRate(playSpeed * 1000);
+        iinaPlayer().setPlaybackRate(playSpeed * 1000);
     }
 
     getPlaybackRate() {
@@ -912,7 +757,7 @@
                 this.saveVolume(val / 100);
                 this.events.trigger(this, 'volumechange');
             }
-            getNativeVideoBackend().setVolume(val);
+            iinaPlayer().setVolume(val);
         }
     }
 
@@ -930,7 +775,7 @@
 
     setMute(mute, triggerEvent = true) {
         this._muted = mute;
-        getNativeVideoBackend().setMuted(mute);
+        iinaPlayer().setMuted(mute);
         if (triggerEvent) {
             this.events.trigger(this, 'volumechange');
         }

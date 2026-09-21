@@ -51,3 +51,13 @@ target_link_libraries(test_mpvipc jmp_core Qt6::Test)
 target_include_directories(test_mpvipc PRIVATE ${TEST_INCLUDE_DIRS})
 target_compile_definitions(test_mpvipc PRIVATE ${TEST_COMPILE_DEFS})
 add_test(NAME test_mpvipc COMMAND test_mpvipc)
+
+# The injected web-layer scripts have no compile step, so a reference to a native object that no
+# longer exists only shows up at runtime. This walks a playback lifecycle against a stub bridge.
+find_program(NODE_EXECUTABLE NAMES node nodejs)
+if(NODE_EXECUTABLE)
+  add_test(NAME test_js_adapters
+           COMMAND ${NODE_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/js/test_adapters.js)
+else()
+  message(STATUS "node not found, skipping test_js_adapters")
+endif()
