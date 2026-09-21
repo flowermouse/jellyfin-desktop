@@ -1,7 +1,6 @@
 const features = [
     "filedownload",
     "displaylanguage",
-    "htmlaudioautoplay",
     "htmlvideoautoplay",
     "externallinks",
     "clientsettings",
@@ -16,10 +15,9 @@ const features = [
     "fileinput"
 ];
 
-// MPV is the only supported playback backend in this fork.
+// Video plays in the user's own IINA installation; this build has no audio player at all.
 const plugins = [
     'mpvVideoPlayer',
-    'mpvAudioPlayer',
     'inputPlugin',
     'updatePlugin'
 ];
@@ -148,7 +146,7 @@ function getDeviceProfile() {
         });
     }
 
-    const DirectPlayProfiles = [{ 'Type': 'Audio' }, { 'Type': 'Photo' }];
+    const DirectPlayProfiles = [{ 'Type': 'Photo' }];
 
     if (!jmpInfo.settings.video.always_force_transcode) {
         DirectPlayProfiles.push({ 'Type': 'Video' });
@@ -160,7 +158,6 @@ function getDeviceProfile() {
         'MusicStreamingTranscodingBitrate': 1280000,
         'TimelineOffsetSeconds': 5,
         'TranscodingProfiles': [
-            { 'Type': 'Audio' },
             {
                 'Container': 'ts',
                 'Type': 'Video',

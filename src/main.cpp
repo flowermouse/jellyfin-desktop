@@ -17,8 +17,6 @@
 #include "system/SystemComponent.h"
 #include "Paths.h"
 #include "core/ProfileManager.h"
-#include "player/PlayerComponent.h"
-#include "player/OpenGLDetect.h"
 #include "display/DisplayComponent.h"
 #include "Version.h"
 #include "settings/SettingsComponent.h"
@@ -227,7 +225,16 @@ int main(int argc, char *argv[])
 #endif
     }
 
-    detectOpenGLEarly();
+    // Request a 3.2 core profile with an sRGB colour space before the QGuiApplication
+    // exists; without the colour space the UI is oversaturated on HDR displays.
+    {
+      QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+      format.setMajorVersion(3);
+      format.setMinorVersion(2);
+      format.setProfile(QSurfaceFormat::CoreProfile);
+      format.setColorSpace(QColorSpace::SRgb);
+      QSurfaceFormat::setDefaultFormat(format);
+    }
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 
@@ -476,8 +483,6 @@ int main(int argc, char *argv[])
     SignalManager signalManager(&app);
     Q_UNUSED(signalManager);
 #endif
-
-    detectOpenGLLate();
 
     // Initialize all the components. This needs to be done
     // early since most everything else relies on it

@@ -6,7 +6,6 @@
 #include "Paths.h"
 #include "core/ProfileManager.h"
 #include "utils/Utils.h"
-#include "AudioSettingsController.h"
 #include "Names.h"
 
 #include <QSaveFile>
@@ -710,16 +709,6 @@ bool SettingsComponent::componentInitialize()
     return false;
 
   load();
-
-  // add our AudioSettingsController that will inspect audio settings and react.
-  // then run the signal the first time to make sure that we set the proper visibility
-  // on the items from the start.
-  //
-  auto  ctrl = new AudioSettingsController(this);
-  QVariantMap val;
-  val.insert("devicetype", value(SETTINGS_SECTION_AUDIO, "devicetype"));
-  ctrl->valuesUpdated(val);
-  connect(ctrl, &AudioSettingsController::settingsUpdated, this, &SettingsComponent::groupUpdate);
 
   return true;
 }

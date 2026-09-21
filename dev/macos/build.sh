@@ -15,11 +15,6 @@ if [ ! -d "${QTROOT}" ]; then
     exit 1
 fi
 
-if ! command -v mpv > /dev/null; then
-    echo "error: mpv not found. Run setup.sh first" >&2
-    exit 1
-fi
-
 echo "Using Qt: ${QTROOT}"
 
 # Configure
@@ -32,7 +27,7 @@ cmake -G Ninja \
     -DCMAKE_INSTALL_PREFIX=output \
     -DQTROOT="${QTROOT}" \
     -DCMAKE_PREFIX_PATH="${QTROOT}" \
-    -DUSE_STATIC_MPVQT=ON \
+    -DCMAKE_OSX_ARCHITECTURES=arm64 \
     "${PROJECT_ROOT}"
 
 # Build

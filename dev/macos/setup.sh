@@ -21,7 +21,7 @@ if ! command -v brew > /dev/null; then
 fi
 
 echo "[3/5] Installing build tools..."
-brew install aqtinstall mpv ninja cmake create-dmg
+brew install aqtinstall ninja cmake create-dmg
 
 echo "[4/5] Installing Qt ${QT_VERSION}..."
 if [ ! -d "${DEPS_DIR}/qt/${QT_VERSION}/macos" ]; then

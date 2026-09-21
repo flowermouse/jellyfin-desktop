@@ -2,7 +2,6 @@
 #include "core/Globals.h"
 #include "settings/SettingsComponent.h"
 #include "settings/SettingsSection.h"
-#include "player/PlayerComponent.h"
 #include "display/DisplayComponent.h"
 #include "taskbar/TaskbarComponent.h"
 #include "input/InputComponent.h"
@@ -66,7 +65,6 @@ void WindowManager::initializeWindow(QQuickWindow* window)
   }
 
   // Initialize components that need window reference
-  PlayerComponent::Get().setWindow(m_window);
   DisplayComponent::Get().setApplicationWindow(m_window);
   TaskbarComponent::Get().setWindow(m_window);
 
@@ -917,7 +915,6 @@ void WindowManager::updateDebugInfo()
   debugInfo += infoString;
 
   m_window->setProperty("debugInfo", debugInfo);
-  m_window->setProperty("videoInfo", PlayerComponent::Get().videoInformation());
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

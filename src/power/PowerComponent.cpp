@@ -4,7 +4,6 @@
 #include "PowerComponent.h"
 #include "input/InputComponent.h"
 #include "settings/SettingsComponent.h"
-#include "player/PlayerComponent.h"
 
 #ifdef Q_OS_MAC
 #include "PowerComponentMac.h"
@@ -66,11 +65,6 @@ void PowerComponent::componentPostInitialize()
   InputComponent::Get().registerHostCommand("poweroff", this, "PowerOff");
   InputComponent::Get().registerHostCommand("reboot", this, "Reboot");
   InputComponent::Get().registerHostCommand("suspend", this, "Suspend");
-
-  connect(&PlayerComponent::Get(), &PlayerComponent::playbackStateChanged,
-          this, [this](const QString& state) { setScreensaverEnabled(state != "Playing"); });
-  connect(&PlayerComponent::Get(), &PlayerComponent::playbackStopped,
-          this, [this](bool) { setScreensaverEnabled(true); });
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

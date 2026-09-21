@@ -189,17 +189,9 @@ else()
   endif()
 endif()
 
-if(USE_STATIC_MPVQT)
-  set(MPVQT_TARGET MpvQt)
-else()
-  set(MPVQT_TARGET MpvQt::MpvQt)
-endif()
-
 # Link core library with all dependencies
 target_link_libraries(jmp_core
   shared
-  ${MPV_LIBRARY}
-  ${OPENGL_LIBS}
   ${QT6_LIBRARIES}
   ${OS_LIBS}
   ${EXTRA_LIBS}
@@ -216,7 +208,6 @@ target_link_libraries(jmp_core
   Qt6::OpenGL
   Qt6::Xml
   Qt6::Gui
-  ${MPVQT_TARGET}
 )
 
 if(LINUX_DBUS)

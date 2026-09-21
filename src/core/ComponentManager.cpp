@@ -7,18 +7,12 @@
 
 #include "power/PowerComponent.h"
 #include "input/InputComponent.h"
-#include "player/PlayerComponent.h"
 #include "display/DisplayComponent.h"
 #include "system/SystemComponent.h"
 #include "settings/SettingsComponent.h"
 #include "taskbar/TaskbarComponent.h"
 #include "ui/WindowManager.h"
-#ifdef Q_OS_MAC
 #include "player/IinaPlayerComponent.h"
-#endif
-#ifdef LINUX_DBUS
-#include "mpris/MprisComponent.h"
-#endif
 
 #ifdef KONVERGO_OPENELEC
 #include "system/openelec/OESystemComponent.h"
@@ -62,18 +56,12 @@ void ComponentManager::initialize()
   registerComponent(&InputComponent::Get());
   registerComponent(&SystemComponent::Get());
   registerComponent(&DisplayComponent::Get());
-  registerComponent(&PlayerComponent::Get());
   registerComponent(&PowerComponent::Get());
   registerComponent(&TaskbarComponent::Get());
   registerComponent(&WindowManager::Get());
-#ifdef Q_OS_MAC
-  // Exported as window.api.iinaPlayer. Registered in addition to, never instead of, "player":
-  // audio playback, input, MPRIS and the taskbar all still rely on the built-in PlayerComponent.
+  // Exported as window.api.iinaPlayer. This build has no in-window renderer and no audio
+  // player; external IINA is the only playback backend.
   registerComponent(&IinaPlayerComponent::Get());
-#endif
-#ifdef LINUX_DBUS
-  registerComponent(&MprisComponent::Get());
-#endif
 
 #ifdef KONVERGO_OPENELEC
   registerComponent(&OESystemComponent::Get());

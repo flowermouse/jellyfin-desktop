@@ -322,6 +322,58 @@ endif()
 message(STATUS "WebEngine path fixing complete")
 
 #
+# Thin universal binaries down to the one architecture this build targets.
+#
+# Qt ships prebuilt x86_64+arm64 frameworks, so on a single-architecture build the unused slice
+# is roughly half the bundle - far more than any source-level change can recover. This has to run
+# after every install_name_tool pass and before code signing, since rewriting a Mach-O file
+# invalidates its signature.
+#
+set(thin_arch "@CMAKE_OSX_ARCHITECTURES@")
+if(thin_arch AND NOT thin_arch MATCHES ";")
+  message(STATUS "Thinning bundle to ${thin_arch}")
+  set(thinned_count 0)
+  file(GLOB_RECURSE thin_candidates "${app}/*")
+  foreach(candidate ${thin_candidates})
+    if(IS_SYMLINK "${candidate}" OR IS_DIRECTORY "${candidate}")
+      continue()
+    endif()
+
+    execute_process(
+      COMMAND lipo -archs "${candidate}"
+      OUTPUT_VARIABLE file_archs
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+      RESULT_VARIABLE lipo_result
+    )
+    # Not a Mach-O file.
+    if(NOT lipo_result EQUAL 0)
+      continue()
+    endif()
+
+    string(REPLACE " " ";" arch_list "${file_archs}")
+    list(LENGTH arch_list arch_count)
+    if(arch_count LESS_EQUAL 1 OR NOT "${thin_arch}" IN_LIST arch_list)
+      continue()
+    endif()
+
+    execute_process(
+      COMMAND lipo "${candidate}" -thin "${thin_arch}" -output "${candidate}.thin"
+      RESULT_VARIABLE thin_result
+      ERROR_QUIET
+    )
+    if(thin_result EQUAL 0)
+      # Copy over the original rather than renaming: cp keeps the destination's permission bits,
+      # so executables stay executable.
+      execute_process(COMMAND cp "${candidate}.thin" "${candidate}")
+      math(EXPR thinned_count "${thinned_count} + 1")
+    endif()
+    file(REMOVE "${candidate}.thin")
+  endforeach()
+  message(STATUS "Thinned ${thinned_count} binaries to ${thin_arch}")
+endif()
+
+#
 # Code signing (optional)
 #
 macro(sign_binary BIN)

@@ -8,7 +8,6 @@
 
 #ifdef Q_OS_MAC
 #include "apple/InputAppleRemote.h"
-#include "apple/InputAppleMediaKeys.h"
 #endif
 
 #ifdef HAVE_SDL
@@ -86,7 +85,6 @@ bool InputComponent::componentInitialize()
 
 #ifdef Q_OS_MAC
   addInput(new InputAppleRemote(this));
-  addInput(new InputAppleMediaKeys(this));
 #endif
 #ifdef HAVE_SDL
   if (SettingsComponent::Get().value(SETTINGS_SECTION_MAIN, "sdlEnabled").toBool())

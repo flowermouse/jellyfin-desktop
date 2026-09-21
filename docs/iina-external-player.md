@@ -1,8 +1,30 @@
 # External IINA video playback (macOS)
 
-On macOS this fork does not render video in its own window. It hands the stream Jellyfin Web
-selected to the user's own installation of [IINA](https://iina.io), which plays it in its own
-application window. Audio playback is unaffected and still uses the built-in libmpv player.
+This build does not render video itself. It hands the stream Jellyfin Web selected to the user's
+own installation of [IINA](https://iina.io), which plays it in its own application window.
+
+Scope of this branch:
+
+- **macOS on Apple Silicon only.** The build is pinned to arm64 and the bundle is thinned to a
+  single architecture at deploy time; Intel Macs, Windows and Linux are not supported.
+- **No audio playback.** libmpv and the whole built-in player are gone, so the music library is
+  browsable but not playable. Audio-related settings, Now Playing / media-key integration, MPRIS
+  and album art went with it.
+- **No in-window renderer.** There is no video surface, no transparency layer and no local OSD.
+
+## Bundle size
+
+Removing the mpv stack is the small half of this. Measured on a deployed bundle:
+
+| | |
+| --- | --- |
+| Before | 725 MB |
+| After removing libmpv, ffmpeg and the codec libraries | 669 MB |
+| After thinning to arm64 | 363 MB |
+
+`QtWebEngineCore` is 280 MB of the remaining 363 MB. Trimming further would mean building Qt from
+source with WebEngine features disabled; the Qt QML modules macdeployqt over-collects are only
+worth another ~15 MB and it deploys them whether or not the QML imports them.
 
 ## Scope
 
@@ -51,7 +73,7 @@ adapter routes every end of playback through `playbackManager.stop()` instead. S
 next item does not affect the stop report itself, so the server still receives the final position
 and still marks a fully watched item as played.
 
-Only the external backend behaves this way. The built-in renderer keeps Jellyfin's auto-advance.
+There is no other backend left to behave differently.
 
 ## Runtime dependency
 
@@ -60,8 +82,8 @@ Only the external backend behaves this way. The built-in renderer keeps Jellyfin
   read-only reference checkout used to verify IINA's public behavior; nothing in it is compiled.
 - IINA is located through `NSWorkspace URLForApplicationWithBundleIdentifier:`, so any install
   location works. `Contents/MacOS/iina-cli` inside the discovered bundle is the launcher.
-- If IINA is missing, playback fails with a prompt offering the download page. There is no HTML5
-  fallback and no silent fallback to the built-in renderer.
+- If IINA is missing, playback fails with a prompt offering the download page. There is nothing to
+  fall back to: this build has no renderer of its own.
 
 ## How it works
 
@@ -86,20 +108,22 @@ Source layout:
 | `src/player/IinaSessionState.{h,cpp}` | Playback session state machine |
 | `src/player/IinaPlayerComponent.{h,cpp}` | WebChannel component, process and session lifecycle |
 
-`IinaPlayerComponent` is registered *in addition to*, never instead of, the built-in `player`
-component: `mpvAudioPlayer.js`, input handling, MPRIS and the taskbar all still depend on
-`PlayerComponent`. It deliberately does not inherit from `PlayerComponent`, whose window, MpvQt
-render loop and local playback state have no meaning for a separate application.
+`IinaPlayerComponent` is the only player component. It replaced `PlayerComponent`, whose window,
+MpvQt render loop and local playback state had no meaning for a separate application, rather than
+deriving from it.
 
 Units: everything crossing the WebChannel is in milliseconds; mpv's `time-pos`/`duration` are in
 seconds. All conversion happens in `IinaLaunchArgs` and `IinaPlayerComponent`. Buffered ranges are
-reported in Jellyfin's 100ns ticks, matching the built-in player.
+reported in Jellyfin's 100ns ticks, the unit Jellyfin Web expects.
 
 ## Verification of IINA's public behavior
 
-Read from the IINA sources in `external/iina` at the checked-out revision. **None of this was
-confirmed against a running IINA: IINA is not installed on the development machine used for this
-work.** Everything under "Manual verification still required" below is unverified.
+The design below was derived by reading the IINA sources in `external/iina` at the checked-out
+revision, before IINA was available to test against. It has since been exercised against IINA
+1.4.4 and a real Jellyfin server: playback, seeking, and audio/subtitle track switching work. The
+one defect that testing found — closing the IINA window starting the next episode, in a loop — is
+fixed and described under "Ending playback" above. Everything under "Manual verification still
+required" remains unverified.
 
 1. **`iina-cli` flags** (`iina-cli/main.swift`): `--mpv-<name>=<value>` passes arbitrary mpv
    options through, `--separate-windows`/`-w`, `--stdin`/`--no-stdin`, `--keep-running`,
@@ -128,7 +152,12 @@ work.** Everything under "Manual verification still required" below is unverifie
    with reason `stop` on a socket that stays open. Quitting IINA calls `PlayerCore.shutdown()` →
    `mpv.mpvQuit()` → mpv `quit`, i.e. a `shutdown` event and/or socket disconnect. Both are
    mapped to `canceled`.
-7. **IINA records playback history including the full URL.**
+7. **Launching while IINA is already running still works.** This was the highest-risk assumption,
+   because `iina-cli` execs the IINA binary directly rather than going through LaunchServices; had
+   macOS routed the launch into the existing instance, `applicationDidFinishLaunching` would not
+   have run and no IPC socket would have been created. Consecutive playbacks were observed to
+   start and report state correctly, so the assumption holds in practice.
+8. **IINA records playback history including the full URL.**
    `PlayerCore` calls `HistoryController.shared.add(url, …)` on file-loaded whenever the
    `recordPlaybackHistory` preference is on (the default). The Jellyfin URL, access token
    included, is written to IINA's own history file.
@@ -137,15 +166,6 @@ work.** Everything under "Manual verification still required" below is unverifie
 
 Against a real IINA install, with the matrix in the implementation plan:
 
-- Whether an already-running IINA reuses the existing process for a second `iina-cli` invocation.
-  `iina-cli` execs the IINA binary directly rather than going through LaunchServices. If macOS
-  routes the launch into the existing instance instead of starting a new one,
-  `applicationDidFinishLaunching` will not run for the new request and **no IPC socket will be
-  created**; the session then fails with a connection timeout rather than playing silently
-  without state. This is the single highest-risk assumption in the integration.
-- Whether external subtitle delivery URLs need their own authentication headers when loaded with
-  mpv `sub-add`. Only relevant if server-side sidecar subtitles are ever brought into scope.
-- Whether Direct Play URLs survive IINA's own URL handling.
 - Whether a fully watched item is still marked played. The stop report carries the last `time-pos`
   the socket delivered, and mpv is known to publish an unhelpful value right at end of file. A null
   `time-pos` is ignored so it cannot zero the position, but a bogus numeric one would be accepted.

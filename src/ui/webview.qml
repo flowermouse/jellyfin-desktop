@@ -203,25 +203,6 @@ Window
     when: !components.settings.allowBrowserZoom()
   }
 
-  MpvVideoItem
-  {
-    id: video
-    objectName: "video"
-    enabled: true
-
-    width: mainWindow.contentItem.width
-    height: mainWindow.contentItem.height
-    anchors.left: mainWindow.contentItem.left
-    anchors.right: mainWindow.contentItem.right
-    anchors.top: mainWindow.contentItem.top
-
-    Component.onCompleted: {
-      console.log("MpvVideoItem size:", width, "x", height, "visible:", visible)
-    }
-    onWidthChanged: console.log("MpvVideoItem width changed:", width)
-    onHeightChanged: console.log("MpvVideoItem height changed:", height)
-  }
-
   WebEngineView
   {
     id: web
@@ -229,7 +210,8 @@ Window
     width: mainWindow.width
     height: mainWindow.height
     z: 100
-    backgroundColor: "transparent"
+    // Opaque: there is no video layer behind this view any more.
+    backgroundColor: "black"
 
     // this is needed to prevent intermittent(?) black screens when unminizing
     // or resumsing from suspend (linux/{x11/wayland}, possibly others).

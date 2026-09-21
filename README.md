@@ -1,6 +1,6 @@
 # Jellyfin Desktop
 
-Jellyfin desktop client built with Qt WebEngine and [libmpv](https://github.com/mpv-player/mpv). Supports audio passthrough, hardware decoding, and playback of more formats without transcoding.
+Jellyfin desktop client built with Qt WebEngine. Video plays in the user's own installation of [IINA](https://iina.io); this build has no in-window renderer and no audio player. Apple Silicon only.
 
 ![Screenshot of Jellyfin Desktop](screenshots/video_player.png)
 
@@ -24,14 +24,14 @@ Built from the latest commit on `master`.
 ## Building
 See [dev/](dev/) for platform-specific build instructions.
 
-## macOS video playback
-On macOS, video is played in the user's own installation of [IINA](https://iina.io) rather than in
-the application window; audio still uses the built-in libmpv player. IINA must be installed
-separately and is not bundled. See
+## Playback
+Video is handed to the user's own installation of [IINA](https://iina.io), which must be installed
+separately and is not bundled. There is no in-window renderer, and this build cannot play audio at
+all - the music library is browsable but not playable. See
 [docs/iina-external-player.md](docs/iina-external-player.md).
 
 ## File Locations
-Data is stored per-profile in a `profiles/<profile-id>/` subdirectory. The main configuration file is `jellyfin-desktop.conf`. You can also add `mpv.conf` to configure MPV directly.
+Data is stored per-profile in a `profiles/<profile-id>/` subdirectory. The main configuration file is `jellyfin-desktop.conf`. Playback itself is configured in IINA.
 
 **Windows:**
 - Config: `%LOCALAPPDATA%\Jellyfin Desktop\profiles\<profile-id>\`

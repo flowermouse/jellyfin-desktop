@@ -182,17 +182,6 @@
     "order": 2,
     "values": [
       {
-        "value": "devicetype",
-        "display_name": "Device Type",
-        "help": "Sets the device type. Can be \"Basic\", \"S/PDIF\", or \"HDMI\".\n\n- Basic: disables passthrough.\n- S/PDIF: transcodes surround sound to specific formats.\n- HDMI: supports additional passthrough options.",
-        "default": "basic",
-        "possible_values": [
-          [ "basic", "Basic" ],
-          [ "spdif", "S/PDIF" ],
-          [ "hdmi", "HDMI" ]
-        ]
-      },
-      {
         "value": "channels",
         "display_name": "Channels",
         "help": "Sets how many audio channels are allowed. The default is \"Stereo\" except on MacOS where it is \"Auto\".\n\n- Auto: automatically set.\n- Stereo: 2 channel stereo.\n- 5.1 Surround Sound: up to 5.1 surround sound.\n- 7.1 Surround Sound: up to 7.1 surround sound.",
@@ -213,25 +202,6 @@
         ]
       },
       {
-        "value": "device",
-        "display_name": "Device",
-        "help": "Allows forcing media output to a specific device. The default is \"Auto\".",
-        "default": "auto"
-      },
-      {
-        "value": "normalize",
-        "display_name": "Normalize",
-        "help": "Enable audio volume normalization.",
-        "default": true
-      },
-      {
-        "value": "exclusive",
-        "display_name": "Exclusive",
-        "help": "Takes exclusive control of audio device. The default is disabled.",
-        "default": false,
-        "platforms": [ "osx", "windows" ]
-      },
-      {
         "value": "passthrough.ac3",
         "display_name": "AC3 Passthrough",
         "help": "Enables AC3 passthrough. Requires \"S/PDIF\", or \"HDMI\" device type and all video transcoding to be off. The default is disabled.",
@@ -242,75 +212,16 @@
         "display_name": "DTS Passthrough",
         "help": "Enables DTS passthrough. Requires \"S/PDIF\", or \"HDMI\" device type and all video transcoding to be off. The default is disabled.",
         "default": false
-      },
-      {
-        "value": "passthrough.eac3",
-        "display_name": "E-AC3 Passthrough",
-        "help": "Enables E-AC3 passthrough. Requires \"HDMI\" device type and all video transcoding to be off. The default is disabled.",
-        "default": false,
-        "platforms_excluded": [ "osx", "oe_rpi" ]
-      },
-      {
-        "value": "passthrough.dts-hd",
-        "display_name": "DTS-HD Passthrough",
-        "help": "Enables DTS-HD passthrough. Requires \"HDMI\" device type and all video transcoding to be off. The default is disabled.",
-        "default": false,
-        "platforms_excluded": [ "osx", "oe_rpi" ]
-      },
-      {
-        "value": "passthrough.truehd",
-        "display_name": "TrueHD Passthrough",
-        "help": "Enables TrueHD passthrough. Requires \"HDMI\" device type and all video transcoding to be off. The default is disabled.",
-        "default": false,
-        "platforms_excluded": [ "osx", "oe_rpi" ]
-      }
-    ]
+      }]
   },
   {
     "section": "video",
     "order": 3,
     "values": [
       {
-        "value": "debug.force_vo",
-        "default": "",
-        "hidden": true
-      },
-      {
-        "value": "refreshrate.auto_switch",
-        "display_name": "Display Refresh Rate Sync",
-        "help": "Sets the display refresh rate to the media refresh rate. The default is disabled.",
-        "default": false
-      },
-      {
-        "value": "refreshrate.delay",
-        "default": 3,
-        "hidden": true
-      },
-      {
         "value": "refreshrate.avoid_25hz_30hz",
         "default": true,
         "hidden": true
-      },
-      {
-        "value": "hardwareDecoding",
-        "display_name": "Hardware Decoding",
-        "help": "Sets the hardware decoding method. The default is \"copy\"\n\n- Enabled: full hardware acceleration. Removes MPV shader pipelines. Can cause issues more often.\n- Copy: uses hardware decoding but copies the video through MPV's shader pipelines.\n- Disabled: completely disable hardware decoding. Use this if video is glitchy.",
-        "default": "copy",
-        "possible_values": [
-          [ "enabled", "Enabled", { "platforms_excluded": "osx" } ],
-          [ "enabled", "Enabled (Modern)", { "platforms": "osx" } ],
-          [ "osx_compat", "Enabled (Old)", { "platforms": "osx" } ],
-          [ "copy", "Copy" ],
-          [ "disabled", "Disabled" ]
-        ],
-        "platforms_excluded": "oe_rpi"
-      },
-      {
-        "value": "deinterlace",
-        "display_name": "Deinterlace",
-        "help": "Enables deinterlacing. The default is disabled.",
-        "default": false,
-        "platforms_excluded": "oe_rpi"
       },
       {
         "value": "prefer_transcode_to_h265",
@@ -360,69 +271,6 @@
         "default": false
       },
       {
-        "value": "sync_mode",
-        "display_name": "AV Sync Mode",
-        "help": "How the player synchronizes audio and video.\n\nIf you use this option, you usually want to set it to display-resample to enable a timing mode that tries to not skip or repeat frames when for example playing 24fps video on a 24Hz screen.\n\n- Audio: time video frames to audio. This is the most robust mode, because the player doesn't have to assume anything about how the display behaves. The disadvantage is that it can lead to occasional frame drops or repeats. If audio is disabled, this uses the system clock. This is the default mode.\n\n- Resample: resample audio to match the video. This mode will also try to adjust audio speed to compensate for other drift. (This means it will play the audio at a different speed every once in a while to reduce the A/V difference.)\n\n- Audio Drop: drop or repeat audio data to compensate desyncing video. This mode will cause severe audio artifacts if the real monitor refresh rate is too different from the reported or forced rate. Since mpv 0.33.0, this acts on entire audio frames, instead of single samples.",
-        "default": "audio",
-        "possible_values": [
-          [ "audio", "Audio" ],
-          [ "display-resample", "Resample" ],
-          [ "display-adrop", "Audio Drop" ]
-        ]
-      },
-      {
-        "value": "audio_delay.normal",
-        "default": 0,
-        "hidden": true,
-        "possible_range": {
-          "min": -300,
-          "max": 300,
-          "step": 50
-        }
-      },
-      {
-        "value": "audio_delay.24hz",
-        "default": 0,
-        "hidden": true,
-        "possible_range": {
-          "min": -300,
-          "max": 300,
-          "step": 50
-        }
-      },
-      {
-        "value": "audio_delay.25hz",
-        "default": 0,
-        "hidden": true,
-        "possible_range": {
-          "min": -300,
-          "max": 300,
-          "step": 50
-        }
-      },
-      {
-        "value": "audio_delay.50hz",
-        "default": 0,
-        "hidden": true,
-        "possible_range": {
-          "min": -300,
-          "max": 300,
-          "step": 50
-        }
-      },
-      {
-        "value": "cache",
-        "display_name": "Cache Size",
-        "help": "Controls cache size in MB for video streaming. The default is 75 MB",
-        "default": 75,
-        "possible_values": [
-          [ 10, "Tiny (10 MB)" ],
-          [ 75, "Default (75 MB)" ],
-          [ 150, "Large (150 MB)", { "platforms_excluded": "oe_rpi" } ],
-          [ 500, "Very Large (500 MB)", { "platforms_excluded": "oe_rpi" } ]
-        ]
-      },
-      {
         "value": "aspect",
         "display_name": "Aspect Ratio",
         "default": "normal",
@@ -453,146 +301,6 @@
           [ 3.0, "3x" ],
           [ 3.5, "3.5x" ],
           [ 4.0, "4.0x" ]
-        ]
-      }
-    ]
-  },
-  {
-    "section": "subtitles",
-    "order": 4,
-    "values": [
-      {
-        "value": "ass_scale_border_and_shadow",
-        "display_name": "ASS Scale Border and Shadow",
-        "help": "For ASS format subtitles, ensures that the text borders and shadows scale proportionally with the resolution.",
-        "default": true
-      },
-      {
-        "value": "ass_style_override",
-        "display_name": "ASS Style Override",
-        "help": "Control whether user style overrides should be applied. Note that all of these overrides try to be somewhat smart about figuring out whether or not a subtitle is considered a \"sign\".\n\nNo:	Render subtitles as specified by the subtitle scripts, without overrides.\nYes:	Apply all the --sub-ass-* style override options. Changing the default for any of these options can lead to incorrect subtitle rendering (default).\nForce:	Like yes, but also force all --sub-* options. Can break rendering easily.\nScale:	Like yes, but also apply --sub-scale.\nStrip:	Radically strip all ASS tags and styles from the subtitle. This is equivalent to the old --no-ass / --no-sub-ass options.\n\nThis also controls some bitmap subtitle overrides, as well as HTML tags in formats like SRT, despite the name of the option.",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "yes", "Yes" ],
-          [ "no", "No" ],
-          [ "force", "Force" ],
-          [ "scale", "Scale" ],
-          [ "strip", "Strip" ]
-        ]
-      },
-      {
-        "value": "placement",
-        "display_name": "Placement",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "left,bottom", "Left, Bottom" ],
-          [ "right,bottom", "Right, Bottom" ],
-          [ "center,bottom", "Center, Bottom" ],
-          [ "left,top", "Left, Top" ],
-          [ "right,top", "Right, Top" ],
-          [ "center,top", "Center, Top" ]
-        ]
-      },
-      {
-        "value": "color",
-        "display_name": "Color",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "#000000", "Black" ],
-          [ "#FFFFFF", "White" ],
-          [ "#EEEEEE", "Light Grey" ],
-          [ "#CCCCCC", "Blended Light Grey" ],
-          [ "#FBF93E", "Yellow" ],
-          [ "#FFFFCC", "Light Yellow" ],
-          [ "#EEEDB8", "Blended Light Yellow" ]
-        ]
-      },
-      {
-        "value": "border_color",
-        "display_name": "Border Color",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "#000000", "Black" ],
-          [ "#FFFFFF", "White" ],
-          [ "#EEEEEE", "Light Grey" ],
-          [ "#CCCCCC", "Blended Light Grey" ],
-          [ "#FBF93E", "Yellow" ],
-          [ "#FFFFCC", "Light Yellow" ],
-          [ "#EEEDB8", "Blended Light Yellow" ]
-        ]
-      },
-      {
-        "value": "border_size",
-        "display_name": "Border Size",
-        "default": -1,
-        "possible_values": [
-          [ -1, "Default" ],
-          [ 0, "None" ],
-          [ 1, "Tiny" ],
-          [ 2, "Small" ],
-          [ 3, "Normal" ],
-          [ 4, "Large" ],
-          [ 5, "Huge" ]
-        ]
-      },
-      {
-        "value": "background_color",
-        "display_name": "Background Color",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "#000000", "Black" ],
-          [ "#FFFFFF", "White" ],
-          [ "#EEEEEE", "Light Grey" ],
-          [ "#CCCCCC", "Blended Light Grey" ],
-          [ "#FBF93E", "Yellow" ],
-          [ "#FFFFCC", "Light Yellow" ],
-          [ "#EEEDB8", "Blended Light Yellow" ]
-        ]
-      },
-      {
-        "value": "background_transparency",
-        "display_name": "Background Transparency",
-        "default": "",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "FF", "0%" ],
-          [ "C0", "25%" ],
-          [ "80", "50%" ],
-          [ "40", "75%" ],
-          [ "00", "100%" ]
-        ]
-      },
-      {
-        "value": "size",
-        "display_name": "Size",
-        "default": -1,
-        "possible_values": [
-          [ -1, "Default" ],
-          [ 18, "Tiny" ],
-          [ 24, "Small" ],
-          [ 32, "Normal" ],
-          [ 42, "Large" ],
-          [ 60, "Huge" ]
-        ]
-      },
-      {
-        "value": "font",
-        "display_name": "Font",
-        "default": "sans-serif",
-        "possible_values": [
-          [ "", "Default" ],
-          [ "serif", "Serif" ],
-          [ "sans-serif", "Sans-Serif" ],
-          [ "script", "Script" ],
-          [ "monospace", "Monospace" ],
-          [ "display", "Display" ],
-          [ "cursive", "Cursive" ],
-          [ "fantasy", "Fantasy" ]
         ]
       }
     ]
@@ -652,16 +360,6 @@
       {
         "value": "emulatepht",
         "default": true
-      }
-    ]
-  },
-  {
-    "section": "albumart",
-    "hidden": true,
-    "values": [
-      {
-        "value": "cacheSize",
-        "default": 10485760
       }
     ]
   },
