@@ -16,25 +16,13 @@ const features = [
     "fileinput"
 ];
 
-const getPlugins = () => {
-    const basePlugins = [
-        'inputPlugin',
-        'updatePlugin'
-    ];
-
-    const mpvEnabled = jmpInfo.settings?.main?.enableMPV !== false;
-    if (mpvEnabled) {
-        return [
-            'mpvVideoPlayer',
-            'mpvAudioPlayer',
-            ...basePlugins
-        ];
-    }
-
-    return basePlugins;
-};
-
-const plugins = getPlugins();
+// MPV is the only supported playback backend in this fork.
+const plugins = [
+    'mpvVideoPlayer',
+    'mpvAudioPlayer',
+    'inputPlugin',
+    'updatePlugin'
+];
 
 // Plugins are bundled, return class directly
 for (const plugin of plugins) {
