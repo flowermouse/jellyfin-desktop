@@ -7,9 +7,10 @@
     }
 
     /**
-     * The native object that actually renders video. On macOS video is handed to the user's own
-     * installation of IINA, exposed as its own WebChannel object; everywhere else the built-in
-     * mpv PlayerComponent renders it. Audio playback always stays on `window.api.player`.
+     * The native object that plays video: the user's own IINA installation, exposed over the
+     * WebChannel. `window.api.player` no longer exists in this build - there is no in-window
+     * renderer and no audio player - so the fallback only keeps the shape of the original
+     * upstream adapter.
      */
     function getNativeVideoBackend() {
         return window.api.iinaPlayer || window.api.player;
@@ -845,10 +846,6 @@
         let playSpeed = +value; //this comes as a string from player force int for now
         this._playRate = playSpeed;
         getNativeVideoBackend().setPlaybackRate(playSpeed * 1000);
-
-        if (window.api && window.api.player) {
-            window.api.player.notifyRateChange(playSpeed);
-        }
     }
 
     getPlaybackRate() {
