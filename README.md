@@ -24,6 +24,12 @@ Built from the latest commit on `master`.
 ## Building
 See [dev/](dev/) for platform-specific build instructions.
 
+## macOS video playback
+On macOS, video is played in the user's own installation of [IINA](https://iina.io) rather than in
+the application window; audio still uses the built-in libmpv player. IINA must be installed
+separately and is not bundled. See
+[docs/iina-external-player.md](docs/iina-external-player.md).
+
 ## File Locations
 Data is stored per-profile in a `profiles/<profile-id>/` subdirectory. The main configuration file is `jellyfin-desktop.conf`. You can also add `mpv.conf` to configure MPV directly.
 

@@ -82,6 +82,12 @@ void Log::CensorAuthTokens(QString& msg)
   elidePattern(msg, "ApiKey=", 32);
   elidePattern(msg, "AccessToken=", 32);
   elidePattern(msg, "AccessToken\":\"", 32);
+  // Emby-compatible aliases the Jellyfin web client and server still use.
+  elidePattern(msg, "X-Emby-Token%3D", 32);
+  elidePattern(msg, "X-Emby-Token=", 32);
+  elidePattern(msg, "X-Emby-Token: ", 32);
+  elidePattern(msg, "Authorization: Bearer ", 32);
+  elidePattern(msg, "Token=\"", 32);
 }
 
 

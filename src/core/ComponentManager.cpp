@@ -13,6 +13,9 @@
 #include "settings/SettingsComponent.h"
 #include "taskbar/TaskbarComponent.h"
 #include "ui/WindowManager.h"
+#ifdef Q_OS_MAC
+#include "player/IinaPlayerComponent.h"
+#endif
 #ifdef LINUX_DBUS
 #include "mpris/MprisComponent.h"
 #endif
@@ -63,6 +66,11 @@ void ComponentManager::initialize()
   registerComponent(&PowerComponent::Get());
   registerComponent(&TaskbarComponent::Get());
   registerComponent(&WindowManager::Get());
+#ifdef Q_OS_MAC
+  // Exported as window.api.iinaPlayer. Registered in addition to, never instead of, "player":
+  // audio playback, input, MPRIS and the taskbar all still rely on the built-in PlayerComponent.
+  registerComponent(&IinaPlayerComponent::Get());
+#endif
 #ifdef LINUX_DBUS
   registerComponent(&MprisComponent::Get());
 #endif

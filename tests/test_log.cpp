@@ -102,6 +102,27 @@ void TestLog::testCensorAuthTokens_data()
     << R"({"AccessToken":"abcdef0123456789abcdef0123456789"})"
     << R"({"AccessToken":")" + masked32 + R"("})";
 
+  // X-Emby-Token, the alias the web client sends alongside api_key
+  QTest::newRow("X-Emby-Token URL-encoded")
+    << "header=X-Emby-Token%3Dabcdef0123456789abcdef0123456789done"
+    << "header=X-Emby-Token%3D" + masked32 + "done";
+
+  QTest::newRow("X-Emby-Token plain")
+    << "X-Emby-Token=abcdef0123456789abcdef0123456789end"
+    << "X-Emby-Token=" + masked32 + "end";
+
+  QTest::newRow("X-Emby-Token header")
+    << "X-Emby-Token: abcdef0123456789abcdef0123456789end"
+    << "X-Emby-Token: " + masked32 + "end";
+
+  QTest::newRow("Authorization bearer")
+    << "Authorization: Bearer abcdef0123456789abcdef0123456789end"
+    << "Authorization: Bearer " + masked32 + "end";
+
+  QTest::newRow("Emby authorization Token attribute")
+    << R"(X-Emby-Authorization: MediaBrowser Client="x", Token="abcdef0123456789abcdef0123456789")"
+    << R"(X-Emby-Authorization: MediaBrowser Client="x", Token=")" + masked32 + R"(")";
+
   // Multiple tokens
   QTest::newRow("two api_key tokens")
     << "url?api_key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&redirect=url2?api_key=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
