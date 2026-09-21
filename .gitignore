@@ -20,3 +20,4 @@ debian/files
 debian/jellyfin-desktop.substvars
 debian/debhelper-build-stamp
 deployment/dist
+*.log
