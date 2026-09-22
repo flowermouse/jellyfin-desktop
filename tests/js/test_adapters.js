@@ -50,6 +50,7 @@ const METHODS = ['load', 'play', 'pause', 'stop', 'seekTo', 'setVolume', 'setMut
 
 function makeEnvironment() {
   const nativeCalls = [];
+  const loadArgs = [];
   const signals = {};
   for (const name of SIGNALS) signals[name] = makeSignal(name);
 
@@ -57,6 +58,7 @@ function makeEnvironment() {
   for (const method of METHODS) {
     iinaPlayer[method] = (...args) => {
       nativeCalls.push(method);
+      if (method === 'load') loadArgs.push(args);
       // load() and getPosition() answer through a WebChannel callback.
       if (method === 'load') args[args.length - 1](true);
       if (method === 'getPosition') args[0](1234);
@@ -73,7 +75,7 @@ function makeEnvironment() {
     },
   };
 
-  return { win, iinaPlayer, signals, nativeCalls };
+  return { win, iinaPlayer, signals, nativeCalls, loadArgs };
 }
 
 function loadScript(env, name) {
@@ -83,12 +85,13 @@ function loadScript(env, name) {
   new Function('window', 'jmpInfo', 'console', source)(sandbox.window, sandbox.jmpInfo, sandbox.console);
 }
 
-function playOptions() {
+function playOptions(item) {
   return {
     url: 'https://server:8096/Videos/1/stream.mkv?api_key=0123456789abcdef',
     playerStartPositionTicks: 600000000, // 60s
     fullscreen: true,
-    item: {},
+    item: item || { Type: 'Episode', Name: 'The Episode', SeriesName: 'Test Series',
+                    ParentIndexNumber: 1, IndexNumber: 2 },
     mediaSource: {
       DefaultAudioStreamIndex: 1,
       DefaultSubtitleStreamIndex: 2,
@@ -124,6 +127,11 @@ async function testVideoAdapter() {
   check(!env.nativeCalls.includes('setVideoRectangle'),
         'play() does not touch the local video surface');
   check(env.nativeCalls.includes('load'), 'play() loads the media in IINA');
+
+  // IINA titles a network stream from mpv's media-title. Without one it would show the stream
+  // URL, so the item's own name has to cross the bridge with the request.
+  equal(env.loadArgs[0][2].title, 'Test Series - S01E02 - The Episode',
+        'an episode is titled by series, season, episode number and name');
 
   env.signals.playing.fire();
   env.signals.updateDuration.fire(3600000);
@@ -161,6 +169,40 @@ async function testVideoAdapter() {
   env.signals.canceled.fire();
   equal(triggered.join(','), 'stopped', 'closing IINA during a later session still reports stopped');
   equal(stopRequests, 2, 'closing IINA also suppresses the next item');
+}
+
+// The other item shapes Jellyfin hands the adapter. Each runs against its own player so the
+// signal bookkeeping testVideoAdapter() asserts on is left alone.
+async function testDisplayTitles() {
+  const cases = [
+    [{ Type: 'Movie', Name: 'The Movie', ProductionYear: 1999 }, 'The Movie (1999)',
+     'a movie is titled by name and year'],
+    [{ Type: 'Movie', Name: 'The Movie' }, 'The Movie',
+     'a movie with no year is titled by name alone'],
+    [{ Type: 'Episode', Name: 'The Special', SeriesName: 'Test Series' }, 'Test Series - The Special',
+     'an episode without numbering drops the SxxExx part'],
+    [{ Type: 'Episode', Name: 'The Orphan' }, 'The Orphan',
+     'an episode with no series falls back to its own name'],
+    [{}, '', 'an item with no name leaves IINA to name the window itself'],
+  ];
+
+  for (const [item, expected, description] of cases) {
+    const env = makeEnvironment();
+    loadScript(env, 'mpvVideoPlayer.js');
+    const player = new env.win._mpvVideoPlayer({
+      events: { trigger() {} },
+      loading: { show() {}, hide() {} },
+      appRouter: { showVideoOsd() {} },
+      globalize: { translate: (k) => k },
+      appHost: {},
+      appSettings: { get: () => 1, set() {} },
+      playbackManager: { stop: (p) => p.stop(true, true) },
+      confirm: async () => { throw new Error('dismissed'); },
+    });
+
+    await player.play(playOptions(item));
+    equal(env.loadArgs[0][2].title, expected, description);
+  }
 }
 
 async function testInputPlugin() {
@@ -202,6 +244,7 @@ async function testInputPlugin() {
 (async () => {
   console.log('********* Start testing of Adapters *********');
   await testVideoAdapter();
+  await testDisplayTitles();
   await testInputPlugin();
   console.log(`Totals: ${failures} failed`);
   console.log('********* Finished testing of Adapters *********');

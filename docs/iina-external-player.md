@@ -55,6 +55,17 @@ Track changes made inside IINA's own menus are not reported back to Jellyfin. `a
 `track-list` are deliberately not observed, so Jellyfin's menu and the server session keep showing
 the track that was selected through Jellyfin.
 
+## Window title
+
+IINA titles a network stream from mpv's `media-title`, which for a Jellyfin stream URL would be
+the item id and access token. `native/mpvVideoPlayer.js` therefore composes a title from the item
+the server described — `Series - S01E02 - Episode` for an episode, `Movie (Year)` for a movie,
+the plain name otherwise — and passes it over the bridge as `metadata.title`;
+`IinaLaunchArgs::buildCliArguments()` turns it into `--mpv-force-media-title=<title>`. An item with
+no usable name sends nothing and leaves IINA's own naming in place.
+
+The title is composed on the web side because that is the only side that sees the Jellyfin item.
+
 ## Ending playback
 
 Nothing auto-advances. Whether an item finishes, is stopped, or its IINA window is closed, the

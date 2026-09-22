@@ -106,6 +106,11 @@ QStringList IinaLaunch::buildCliArguments(const MediaRequest& request)
   if (!request.ipcSocketPath.isEmpty())
     args << mpvArgument(QStringLiteral("input-ipc-server"), request.ipcSocketPath);
 
+  // force-media-title overrides both the container metadata and the file name IINA would
+  // otherwise display, so the window carries the Jellyfin title rather than the stream URL.
+  if (!request.title.isEmpty())
+    args << mpvArgument(QStringLiteral("force-media-title"), request.title);
+
   const QString start = secondsArgument(request.startMilliseconds);
   if (!start.isEmpty())
     args << mpvArgument(QStringLiteral("start"), start);

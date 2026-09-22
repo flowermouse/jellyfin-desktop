@@ -23,6 +23,9 @@ namespace IinaLaunch
     QString url;
     QString ipcSocketPath;
     QString userAgent;
+    // Shown by IINA in its window and title bar. Without it IINA falls back to the media path,
+    // which for Jellyfin is an opaque item id plus an access token.
+    QString title;
     qint64 startMilliseconds = 0;
     bool autoplay = true;
     bool fullscreen = false;

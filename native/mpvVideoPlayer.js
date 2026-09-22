@@ -7,6 +7,32 @@
     }
 
     /**
+     * The name IINA puts in its window, title bar and Dock menu. IINA shows mpv's media-title for
+     * a network stream, which for Jellyfin would be the bare item id and access token, so the
+     * title is composed here from what the server said about the item.
+     */
+    function getDisplayTitle(item) {
+        if (!item || !item.Name) {
+            return '';
+        }
+
+        if (item.Type === 'Episode' && item.SeriesName) {
+            const season = item.ParentIndexNumber;
+            const episode = item.IndexNumber;
+            const number = season != null && episode != null
+                ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')} - `
+                : '';
+            return `${item.SeriesName} - ${number}${item.Name}`;
+        }
+
+        if (item.Type === 'Movie' && item.ProductionYear) {
+            return `${item.Name} (${item.ProductionYear})`;
+        }
+
+        return item.Name;
+    }
+
+    /**
      * The user's own IINA installation, exposed over the WebChannel. It is the only playback
      * backend in this build: video appears in IINA's own window, so this adapter never creates a
      * video surface, changes backdrop transparency or takes over the OSD.
@@ -331,7 +357,13 @@
                 console.log('[MPV] Audio track index:', this._audioTrackIndexToSetOnPlaying);
                 console.log('[MPV] Subtitle track index:', this._subtitleTrackIndexToSetOnPlaying);
 
-                const streamdata = {type: 'video', headers: {'User-Agent': jmpInfo.userAgent}, metadata: options.item, media: {}};
+                const streamdata = {
+                    type: 'video',
+                    headers: {'User-Agent': jmpInfo.userAgent},
+                    metadata: options.item,
+                    title: getDisplayTitle(options.item),
+                    media: {},
+                };
                 const fps = this.tryGetFramerate(options);
                 if (fps) {
                     streamdata.frameRate = fps;

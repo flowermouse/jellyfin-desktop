@@ -147,6 +147,8 @@ bool IinaPlayerComponent::load(const QString& url,
                           .toMap()
                           .value(QStringLiteral("User-Agent"))
                           .toString();
+  // Composed by the web adapter, which is the only side that knows how a Jellyfin item is named.
+  request.title = metadata.value(QStringLiteral("title")).toString();
   request.audioStream = audioStream;
   request.subtitleStream = subtitleStream;
 

@@ -24,6 +24,7 @@ private slots:
   void testCliArgumentsAreSeparateElements();
   void testCliArgumentsOmitUnsetOptions();
   void testCliArgumentsKeepExternalSubtitleOffCommandLine();
+  void testCliArgumentsCarryTheDisplayTitle();
   void testSocketPathIsShortAndUnique();
 
   void testSessionEmitsPlayingOnlyAfterFileLoaded();
@@ -182,6 +183,24 @@ void TestIina::testCliArgumentsKeepExternalSubtitleOffCommandLine()
   for (const QString& arg : args)
     QVERIFY2(!arg.contains(QStringLiteral("secrettoken")),
              "an external subtitle URL must never reach the command line");
+}
+
+void TestIina::testCliArgumentsCarryTheDisplayTitle()
+{
+  IinaLaunch::MediaRequest request;
+  request.url = QString::fromLatin1(kMediaUrl);
+  // Spaces, a dash and non-ASCII all have to survive as one argv element.
+  request.title = QStringLiteral("Le Samoura\u00EF - S01E02 - L'\u00E9v\u00E9nement");
+
+  const QStringList args = IinaLaunch::buildCliArguments(request);
+
+  QVERIFY(args.contains(
+      QStringLiteral("--mpv-force-media-title=Le Samoura\u00EF - S01E02 - L'\u00E9v\u00E9nement")));
+
+  // An untitled item leaves IINA's own naming alone rather than blanking the window title.
+  request.title.clear();
+  for (const QString& arg : IinaLaunch::buildCliArguments(request))
+    QVERIFY(!arg.startsWith(QStringLiteral("--mpv-force-media-title")));
 }
 
 void TestIina::testSocketPathIsShortAndUnique()
