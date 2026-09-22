@@ -15,14 +15,6 @@
 #include "InputSDL.h"
 #endif
 
-#ifdef HAVE_LIRC
-#include "InputLIRC.h"
-#endif
-
-#ifdef HAVE_CEC
-#include "InputCEC.h"
-#endif
-
 #define LONG_HOLD_MSEC 500
 #define INITAL_AUTOREPEAT_MSEC 650
 
@@ -91,13 +83,6 @@ bool InputComponent::componentInitialize()
 #ifdef HAVE_SDL
   if (SettingsComponent::Get().value(SETTINGS_SECTION_MAIN, "sdlEnabled").toBool())
     addInput(new InputSDL(this));
-#endif
-#ifdef HAVE_LIRC
-  addInput(new InputLIRC(this));
-#endif
-#ifdef HAVE_CEC
-  if (SettingsComponent::Get().value(SETTINGS_SECTION_CEC, "enable").toBool())
-    addInput(new InputCEC(this));
 #endif
 
   return true;

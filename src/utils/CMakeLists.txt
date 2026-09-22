@@ -5,10 +5,4 @@ add_sources(
   Log.cpp Log.h
 )
 
-if(APPLE)
-  add_subdirectory(osx)
-endif(APPLE)
-
-if(WIN32)
-  add_subdirectory(win)
-endif()
+add_subdirectory(osx)

@@ -1,8 +1,4 @@
-if(APPLE)
-  set(SCRIPT CompleteBundleMac)
-elseif(WIN32)
-  set(SCRIPT CompleteBundleWin)
-endif(APPLE)
+set(SCRIPT CompleteBundleMac)
 
 option(CODE_SIGN "code sign the app" OFF)
 if(CODE_SIGN)

@@ -22,10 +22,6 @@ add_subdirectory(settings)
 add_subdirectory(power)
 add_subdirectory(taskbar)
 
-if(LINUX_DBUS)
-  add_subdirectory(mpris)
-endif()
-
 get_property(ALL_SRCS GLOBAL PROPERTY SRCS_LIST)
 set(MAIN_SRCS main.cpp)
 
@@ -96,10 +92,6 @@ if(APPLE)
   set_source_files_properties(${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 endif()
 
-if(WIN32)
-  list(APPEND RESOURCE_FILES ${CMAKE_SOURCE_DIR}/bundle/win/iconres.rc)
-endif()
-
 # Generate qt.conf so that dev builds find Qt plugins and QML files
 # without needing DYLD_FRAMEWORK_PATH / QT_PLUGIN_PATH / PATH env vars.
 if(NOT "${QTROOT}" STREQUAL "")
@@ -108,24 +100,9 @@ if(NOT "${QTROOT}" STREQUAL "")
 endif()
 
 set(RESOURCE_ROOT .)
-if(NOT APPLE)
-  set(rsrc_locations
-    ${QTROOT}/resources
-    /usr/share/qt/resources
-  )
-  foreach(loc ${rsrc_locations})
-    if(EXISTS ${loc}/qtwebengine_devtools_resources.pak)
-      install(FILES ${loc}/qtwebengine_devtools_resources.pak DESTINATION resources)
-    endif()
-  endforeach()
-endif()
-
-if(XCODE)
-  get_resources_source_list(${MAIN_TARGET} XCODE_RESOURCES)
-endif()
 
 get_property(BUNDLED_FILES GLOBAL PROPERTY CONFIG_BUNDLED_FILES)
-add_executable(${MAIN_TARGET} WIN32 MACOSX_BUNDLE ${MAIN_SRCS} ${BUNDLED_FILES} ${RESOURCE_FILES} ${XCODE_RESOURCES})
+add_executable(${MAIN_TARGET} MACOSX_BUNDLE ${MAIN_SRCS} ${BUNDLED_FILES} ${RESOURCE_FILES})
 add_dependencies(${MAIN_TARGET} generate_resources)
 std_target_properties(${MAIN_TARGET})
 if(APPLE)
@@ -164,16 +141,7 @@ qt_add_qml_module(${MAIN_TARGET}
 )
 
 find_library(MINIZIP_LIBRARY minizip)
-if(WIN32)
-  # FindZLIB doesn't find this. (It might be possible to fix the minizip build
-  # to not require this.)
-  find_library(ZLIB_LIBRARIES zlibwapi)
-  if(ZLIB_LIBRARIES)
-    set(ZLIB_FOUND on)
-  endif()
-else()
-  include(FindZLIB)
-endif()
+include(FindZLIB)
 
 if(ZLIB_FOUND AND MINIZIP_LIBRARY)
   message(STATUS "Using minizip")
@@ -203,10 +171,7 @@ target_link_libraries(jmp_core
   ${QT6_LIBRARIES}
   ${OS_LIBS}
   ${EXTRA_LIBS}
-  ${X11_LIBRARIES}
-  ${X11_Xrandr_LIB}
   ${CMAKE_THREAD_LIBS_INIT}
-  ${RPI_LIBS}
   ${MINIZIP_LIBS}
   Qt6::Core
   Qt6::Quick
@@ -218,16 +183,6 @@ target_link_libraries(jmp_core
   Qt6::Gui
   ${MPVQT_TARGET}
 )
-
-if(LINUX_DBUS)
-  target_link_libraries(jmp_core Qt6::DBus)
-endif()
-
-# Delay-load libmpv on Windows for runtime AVX2 fallback
-if(WIN32)
-  target_link_libraries(jmp_core delayimp.lib)
-  target_link_options(jmp_core PRIVATE /DELAYLOAD:libmpv-2.dll)
-endif()
 
 target_link_libraries(${MAIN_TARGET} PRIVATE jmp_core)
 install(TARGETS ${MAIN_TARGET} DESTINATION ${INSTALL_BIN_DIR})

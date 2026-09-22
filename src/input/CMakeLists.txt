@@ -8,21 +8,11 @@ set(INPUT_SRCS
   InputSocket.cpp
 )
 
-if(APPLE)
-  add_subdirectory(apple)
-endif(APPLE)
+add_subdirectory(apple)
 
 if(SDL2_FOUND)
   list(APPEND INPUT_SRCS InputSDL.cpp InputSDL.h)
 endif(SDL2_FOUND)
-
-if(ENABLE_LIRC)
-  list(APPEND INPUT_SRCS InputLIRC.cpp InputLIRC.h)
-endif(ENABLE_LIRC)
-
-if(CEC_FOUND)
-  list(APPEND INPUT_SRCS InputCEC.cpp InputCEC.h)
-endif(CEC_FOUND)
 
 add_sources(${INPUT_SRCS})
 

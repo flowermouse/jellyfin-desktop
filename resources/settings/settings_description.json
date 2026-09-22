@@ -612,40 +612,6 @@
     ]
   },
   {
-    "section": "cec",
-    "hidden": true,
-    "values": [
-      {
-        "value": "hdmiport",
-        "default": 0
-      },
-      {
-        "value": "verbose_logging",
-        "default": false
-      },
-      {
-        "value": "enable",
-        "default": true
-      },
-      {
-        "value": "suspendonstandby",
-        "default": false
-      },
-      {
-        "value": "poweroffonstandby",
-        "default": false
-      },
-      {
-        "value": "activatesource",
-        "default": true
-      },
-      {
-        "value": "usekeyupdown",
-        "default": false
-      }
-    ]
-  },
-  {
     "section": "appleremote",
     "hidden": true,
     "values": [

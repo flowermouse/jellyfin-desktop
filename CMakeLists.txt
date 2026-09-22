@@ -70,13 +70,7 @@ include(ClangTidy)
 
 add_definitions(-DQS_LOG_LINE_NUMBERS -DQS_LOG_SEPARATE_THREAD)
 
-if(APPLE)
-  include(AppleConfiguration)
-elseif(WIN32)
-  include(Win32Configuration)
-elseif(UNIX AND (NOT APPLE))
-  include(LinuxConfiguration)
-endif(APPLE)
+include(AppleConfiguration)
 
 if (Qt6_POSITION_INDEPENDENT_CODE)
   SET(CMAKE_POSITION_INDEPENDENT_CODE ON)

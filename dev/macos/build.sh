@@ -33,6 +33,7 @@ cmake -G Ninja \
     -DQTROOT="${QTROOT}" \
     -DCMAKE_PREFIX_PATH="${QTROOT}" \
     -DUSE_STATIC_MPVQT=ON \
+    -DCMAKE_OSX_ARCHITECTURES=arm64 \
     "${PROJECT_ROOT}"
 
 # Build
